@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>首页</title>
+    <meta name="viewport" content="width=device-width">
+    <link href="css/jquery.mobile-1.4.5.min.css" rel="stylesheet" type="text/css">
+    <script src="js/jquery-1.11.1.min.js" type="text/javascript"></script>
+    <script src="js/jquery.mobile-1.4.5.min.js" type="text/javascript"></script>
+    <script src="js/tjrac.base.js" type="text/javascript"></script>
+</head>
+<body>
+    <div class="container" id="index_index">
+        <div class="menu">
+            <ul>
+                <li onclick="window.location.href = 'admin_home.html'"><a href="#">Home</a></li>
+                <li onclick="window.location.href = 'admin_index.html'"><a href="#">User Home</a></li>
+                <li onclick="window.location.href = 'admin_userContorl.html'"><a href="#">UserContorl</a></li>
+                <li onclick="window.location.href = 'admin_reservationContorl.html'"><a href="#">ReservationContorl</a></li>
+                <li onclick="window.location.href = 'admin_notification.html'"><a href="#">Notification Center</a></li>
+                <li onclick="window.location.href = 'admin_order.html'"><a href="#">Orders</a></li>
+                <li onclick="window.location.href = 'login.html'"><a href="#">QUIT</a></li>
+            </ul>
+        </div>
+        <div class="content" style="width: 100%; display: flex; justify-content: center; align-items: center;">
+            <div id="userDetails" style="display: flex; justify-content: start; box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); padding: 50px;">
+                <img id="avatar" src="" alt="头像" style="border-radius: 50%; width: 200px;height: 200px;margin-right: 50px;background-color: #333;">
+                <div style="display: flex;">
+                    <div style="margin-right: 20px;">
+                        <p>Name: <span id="name"></span></p>
+                        <p>Account: <span id="no"></span></p>
+                        <p>Sex: <span id="sex"></span></p>
+                        <p>Star: <span id="star"></span></p>
+                        <p>Role: <span id="roleId"></span></p>
+                    </div>
+                </div>
+                <div style="width: 200px;margin-left: 50px;">
+                    <!-- 添加头像上传按钮 -->
+                    <input type="file" id="avatarInput">
+                    <button onclick="uploadAvatar()">Upload avatar</button>
+                    <button onclick="showMod()">Edit Information</button>
+                </div>
+            </div>
+            <dialog id="mod">
+                <form id="updateForm" style="width: 300px;">
+                    <label for="newName">Name:</label>
+                    <input type="text" id="newName" name="name">
+                    <label for="newpassword">Password:</label>
+                    <input type="password" id="newpassword" name="newpassword">
+                    <label for="newSex">Sex:</label>
+                    <input type="text" id="newSex" name="sex">
+                    <div style="display: flex; width: 100%;justify-content: center;align-items: center;">
+                        <input type="text" id="l_check" name="l_check" required placeholder="Verification code" style="width: 140px;">
+                        <div id="randomStringDisplay" style="width: 50px;user-select: none;text-align: center;" onclick="yzm()"></div>
+                    </div>
+                    
+                    <button type="button" onclick="updateUser()">Submit</button>
+                    <button type="button" onclick="mod.close()">Close</button>
+                </form>
+            </dialog>
+        </div>
+    </div>
+    
+</body>
+<script>
+    function loadData(){
+        var User = JSON.parse(localStorage.getItem("User"));
+        console.log(User)
+
+        $.ajax({
+            type: "GET",
+            url: root_url + "/user/find?id=" + User.id,
+            contentType: "application/json",
+            success: function (data) {
+                if (data.code === 200) {
+                    console.log(data);
+                    var jsondata = JSON.stringify(data.data.user);
+                    localStorage.setItem("User", jsondata);
+                    show(data.data.user);
+                } else {
+                    alert("error");
+                }
+            },
+        });
+    }
+    function show(User){
+
+        // 将其他用户属性展示在页面上
+        $("#name").html(User.name);
+        $("#no").html(User.no);
+        $("#sex").html(User.sex);
+        $("#avatar").attr("src", User.avatar?User.avatar:userImg); // 设置头像图片路径
+        $("#star").html(User.star);
+        var role = User.roleId==0?"Administrators":(User.roleId==1?"coach":"student");
+        $("#roleId").html(role);
+    }
+
+    function showMod(){
+        var User = JSON.parse(localStorage.getItem("User"));
+        $("#newName").val(User.name);
+        $("#newpassword").val(User.password);
+        $("#newSex").val(User.sex);
+        mod.showModal();
+    }
+
+    // 更新用户信息函数
+    function updateUser() {
+        if($("#l_check").val()!=$('#randomStringDisplay').text()){
+                yzm()
+                alert("Verification code error")
+                return;
+            }
+
+        var User = JSON.parse(localStorage.getItem("User"));
+            var formData = {
+                no: User.no,
+                id: User.id,
+                roleId: User.roleId,
+                password: $("#newpassword").val()?$("#newpassword").val():User.password,
+                name: $("#newName").val()?$("#newName").val():User.name,
+                sex: $("#newSex").val()?$("#newSex").val():User.sex
+            };
+
+            $.ajax({
+                type: "POST",
+                url: root_url + "/user/update",
+                data: JSON.stringify(formData),
+                contentType: "application/json",
+                success: function(response) {
+                    loadData();
+                    mod.close();
+                },
+                error: function(xhr, status, error) {
+                    console.error("error:", error);
+                }
+            });
+        }
+
+    // 获取用户对象并展示在页面上
+    $(document).ready(function(){
+        var storedUser = localStorage.getItem("User");
+        if(storedUser && JSON.parse(localStorage.getItem("User")).roleId==0) {
+            loadData();
+        } else {
+            // 给出提示或者执行其他逻辑
+            window.location.href = "login.html";
+        }
+        yzm()
+    });
+
+    function yzm(){
+        const randomString = generateRandomString(5);
+        $('#randomStringDisplay').text(randomString);
+    }
+
+    function generateRandomString(length) {
+        const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        let result = '';
+        for (let i = 0; i < length; i++) {
+            result += characters.charAt(Math.floor(Math.random() * characters.length));
+        }
+        return result;
+    }
+
+    // 上传头像函数
+    function uploadAvatar() {
+        var userId = JSON.parse(localStorage.getItem("User")).id;
+        var fileInput = document.getElementById("avatarInput");
+        var file = fileInput.files[0];
+        var formData = new FormData();
+        formData.append("file", file); // 注意这里文件部分的名称必须为 'file'
+
+        $.ajax({
+            type: "POST",
+            url: root_url + "/user/up/" + userId,
+            data: formData,
+            contentType: false,
+            processData: false,
+            success: function(response) {
+                // 处理成功上传的逻辑
+                console.log("头像上传成功！");
+                loadData();
+            },
+            error: function(xhr, status, error) {
+                // 处理上传失败的逻辑
+                console.error("头像上传失败:", error);
+            }
+        });
+    }
+
+    function formatDate(timestamp) {
+        var date = new Date(timestamp * 1000); // 时间戳单位为秒，所以需要乘以1000转换为毫秒
+        var year = date.getFullYear();
+        var month = ("0" + (date.getMonth() + 1)).slice(-2); // 月份从0开始，所以需要加1，然后用slice确保两位数格式
+        var day = ("0" + date.getDate()).slice(-2); // getDate返回月份中的某一天，用slice确保两位数格式
+        var hours = ("0" + date.getHours()).slice(-2); // 获取小时，同样用slice确保两位数格式
+        var minutes = ("0" + date.getMinutes()).slice(-2); // 获取分钟，同样用slice确保两位数格式
+
+        return year + "/" + month + "/" + day + " " + hours + ":" + minutes;
+    }
+
+</script>
+<style>
+    textarea{
+        height: 10em;
+    }
+     /* 样式可以根据需求进行修改 */
+     body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            min-height: 100vh;
+            display: flex;
+            width: 100%;
+        }
+        .menu {
+            background-color: #f0f0f0;
+            width: 200px;
+            padding: 20px;
+            font-size: larger;
+        }
+        .menu ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        .menu li {
+            margin-bottom: 10px;
+        }
+        .menu a {
+            text-decoration: none;
+            color: #333;
+            display: block;
+        }
+</style>
+</html>

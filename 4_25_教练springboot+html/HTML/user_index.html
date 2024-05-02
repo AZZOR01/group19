@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>首页</title>
+    <meta name="viewport" content="width=device-width">
+    <link href="css/jquery.mobile-1.4.5.min.css" rel="stylesheet" type="text/css">
+    <script src="js/jquery-1.11.1.min.js" type="text/javascript"></script>
+    <script src="js/jquery.mobile-1.4.5.min.js" type="text/javascript"></script>
+    <script src="js/tjrac.base.js" type="text/javascript"></script>
+</head>
+<body>
+    <div class="container" id="index_index">
+        <div class="menu">
+            <ul>
+                <li onclick="window.location.href = 'user_home.html'"><a href="#">Home</a></li>
+                <li onclick="window.location.href = 'user_index.html'"><a href="#">UserHome</a></li>
+                <li onclick="window.location.href = 'user_schedule.html'"><a href="#">Schedule Training</a></li>
+                <li onclick="window.location.href = 'user_buy.html'"><a href="#">Subscription Plan</a></li>
+                <li onclick="window.location.href = 'login.html'"><a href="#">QUIT</a></li>
+            </ul>
+        </div>
+        <div class="content" style="width: 100%;">
+            <div id="userDetails" style="display: flex; justify-content: start; margin-left: 20px;margin-top: 10px;margin-bottom: 50px;">
+                <img id="avatar" src="" alt="头像" style="border-radius: 50%; width: 200px;height: 200px;margin-right: 50px;background-color: #333;">
+                <div style="display: flex;">
+                    <div style="margin-right: 20px;">
+                        <p>Name: <span id="name"></span></p>
+                        <p>Account: <span id="no"></span></p>
+                        <p>Sex: <span id="sex"></span></p>
+                        <p>Star: <span id="star"></span></p>
+                        <p>Role: <span id="roleId"></span></p>
+                    </div>
+                    <div>
+                        <p>Remaining appointments: <span id="num"></span></p>
+                        <p>Last login: <span id="lastTime"></span></p>
+                        <p>Membership expiration date: <span id="expiration"></span></p>
+                    </div>
+                </div>
+                <div style="width: 200px;margin-left: 50px;">
+                    <!-- 添加头像上传按钮 -->
+                    <input type="file" id="avatarInput">
+                    <button onclick="uploadAvatar()">Upload avatar</button>
+                    <button onclick="showMod()">Edit Information</button>
+                </div>
+            </div>
+            <dialog id="mod">
+                <form id="updateForm" style="width: 300px;">
+                    <label for="newName">Name:</label>
+                    <input type="text" id="newName" name="name">
+                    <label for="newpassword">Password:</label>
+                    <input type="password" id="newpassword" name="newpassword">
+                    <label for="newSex">Sex:</label>
+                    <input type="text" id="newSex" name="sex">
+                    <div style="display: flex; width: 100%;justify-content: center;align-items: center;">
+                        <input type="text" id="l_check" name="l_check" required placeholder="Verification code" style="width: 140px;">
+                        <div id="randomStringDisplay" style="width: 50px;user-select: none;text-align: center;" onclick="yzm()"></div>
+                    </div>
+                    <button type="button" onclick="updateUser()">Submit</button>
+                    <button type="button" onclick="mod.close()">Close</button>
+                </form>
+            </dialog>
+            <div style="display: flex;">
+                
+                <!-- 预约列表 -->
+                <div style="margin-left: 20px;width: 30%; box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);padding: 20px;margin-bottom: 50px;">
+                    <h3>My Subscribe List</h3>
+                    <div id="reservationList" style="height: 500px; overflow-y: auto;">
+                        <!-- 预约列表项将在JavaScript中动态添加 -->
+                    </div>
+                </div>
+
+                <div style="margin-left: 50px; width: 20%; box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);padding: 20px;margin-bottom: 50px;">
+                    <h3>News</h3>
+                    <div id="noticesList" style="height: 500px; overflow-y: auto;">
+                        <!-- 反馈列表项将在JavaScript中动态添加 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <dialog id="add">
+        <form id="addForm" style="width: 300px;">
+            <label for="n_score">Please rate the coach:</label>
+            <input type="number" id="n_score" name="n_score"></input>
+            <label for="n_feedback">Evaluate:</label>
+            <textarea id="n_feedback" name="n_feedback"></textarea>
+            <input type="number" id="n_id" style="display: none;">
+            <input type="number" id="n_state" style="display: none;">
+            <div style="display: flex;">
+                <button type="button" onclick="add.close()">Close</button>
+                <button type="button" onclick="handleReservationAction()" style="background-color: #0c5e36;color: #f0f0f0;margin-left: 5px;">Add</button>
+            </div>
+        </form>
+    </dialog>
+    
+</body>
+<script>
+    function loadData(){
+        var User = JSON.parse(localStorage.getItem("User"));
+        console.log(User)
+
+        $.ajax({
+            type: "GET",
+            url: root_url + "/user/find?id=" + User.id,
+            contentType: "application/json",
+            success: function (data) {
+                if (data.code === 200) {
+                    console.log(data);
+                    var jsondata = JSON.stringify(data.data.user);
+                    localStorage.setItem("User", jsondata);
+                    show(data.data.user);
+                    showReservations(data.data.reservationList);
+                    showNotices(data.data.notices);
+                    // location.reload();
+                } else {
+                    alert("error");
+                }
+            },
+        });
+    }
+    function show(User){
+
+        // 将其他用户属性展示在页面上
+        $("#name").html(User.name);
+        $("#no").html(User.no);
+        $("#sex").html(User.sex);
+        $("#avatar").attr("src", User.avatar?User.avatar:userImg); // 设置头像图片路径
+        $("#star").html(User.star);
+        var role = User.roleId==0?"Administrators":(User.roleId==1?"coach":"student");
+        $("#roleId").html(role);
+        $("#num").html(User.num);
+        $("#lastTime").html(User.lastTime);
+        $("#expiration").html(formatDate(User.expiration));
+    }
+
+    function showMod(){
+        var User = JSON.parse(localStorage.getItem("User"));
+        $("#newName").val(User.name);
+        $("#newpassword").val(User.password);
+        $("#newSex").val(User.sex);
+        mod.showModal();
+    }
+
+    // 更新用户信息函数
+    function updateUser() {
+        if($("#l_check").val()!=$('#randomStringDisplay').text()){
+                yzm();
+                alert("Verification code error")
+                return;
+            }
+
+        var User = JSON.parse(localStorage.getItem("User"));
+            var formData = {
+                no: User.no,
+                id: User.id,
+                roleId: User.roleId,
+                password: $("#newpassword").val()?$("#newpassword").val():User.password,
+                name: $("#newName").val()?$("#newName").val():User.name,
+                sex: $("#newSex").val()?$("#newSex").val():User.sex
+            };
+
+            $.ajax({
+                type: "POST",
+                url: root_url + "/user/update",
+                data: JSON.stringify(formData),
+                contentType: "application/json",
+                success: function(response) {
+                    loadData();
+                    mod.close();
+                },
+                error: function(xhr, status, error) {
+                    console.error("error:", error);
+                }
+            });
+        }
+
+    // 获取用户对象并展示在页面上
+    $(document).ready(function(){
+        var storedUser = localStorage.getItem("User");
+        if(storedUser && JSON.parse(localStorage.getItem("User")).roleId==2) {
+            loadData();
+        } else {
+            // 给出提示或者执行其他逻辑
+            window.location.href = "login.html";
+        }
+        yzm();
+    });
+    function yzm(){
+        const randomString = generateRandomString(5);
+        $('#randomStringDisplay').text(randomString);
+    }
+
+    // 上传头像函数
+    function uploadAvatar() {
+        var userId = JSON.parse(localStorage.getItem("User")).id;
+        var fileInput = document.getElementById("avatarInput");
+        var file = fileInput.files[0];
+        var formData = new FormData();
+        formData.append("file", file); // 注意这里文件部分的名称必须为 'file'
+
+        $.ajax({
+            type: "POST",
+            url: root_url + "/user/up/" + userId,
+            data: formData,
+            contentType: false,
+            processData: false,
+            success: function(response) {
+                // 处理成功上传的逻辑
+                console.log("头像上传成功！");
+                loadData();
+            },
+            error: function(xhr, status, error) {
+                // 处理上传失败的逻辑
+                console.error("头像上传失败:", error);
+            }
+        });
+    }
+
+    // 显示预约列表
+    function showReservations(reservationList) {
+        var $reservationList = $("#reservationList");
+        $reservationList.empty(); // 清空列表
+
+        reservationList.forEach(function (reservation) {
+            var states = reservation.state == 0 ? "Unconfirmed" : (reservation.state == 1 ? "Confirmed" : (reservation.state == 2 ? "Completed" : "Canceled"));
+            var $itemTime = $("<div>").css({
+                "font-size": "large",
+                "margin-top": "15px" 
+            }).text("Time：" + formatDate(reservation.startTime) + " to " + formatDate(reservation.endTime));
+            var $item = $("<div>").css("white-space", "nowrap").text(reservation.coachName + ", Field: "+ reservation.field + " Status:"+ states);
+            // 添加按钮
+            if (reservation.state == 1) {
+                var $confirmButton = $("<button>").text("Evaluation").click(function() {
+                    showadd(reservation.id, 2);
+                }).css({"margin-left":"10px"}); // 设置按钮样式
+                $item.append($confirmButton); // 将按钮添加到预约信息中
+            }
+            
+            $reservationList.append($itemTime,$item); // 添加预约信息到列表中
+        });
+    }
+
+    function showadd(reservationId, action){
+        $("#n_state").val(action);
+        $("#n_id").val(reservationId);
+        add.showModal();
+    }
+    // 显示
+    function showNotices(notices) {
+        var $noticesList = $("#noticesList");
+        $noticesList.empty(); // 清空列表
+
+        notices.forEach(function (notice) {
+            var $item = $("<div>").css({
+                "margin-top": "15px" 
+            }).text(notice.form + ", Content: " + notice.txt);
+            $noticesList.append($item);
+        });
+    }
+
+    // 处理预约操作
+    function handleReservationAction() {
+        var score = $("#n_score").val()?parseFloat($("#n_score").val()):parseFloat(0);
+
+            var formData = {
+                id:parseInt($("#n_id").val()),
+                state:parseInt($("#n_state").val()),
+                score:score,
+                feedback:$("#n_feedback").val()
+            };
+
+            $.ajax({
+                type: "POST",
+                url: root_url + "/reservation/confirm",
+                data: JSON.stringify(formData),
+                contentType: "application/json",
+                success: function(response) {
+                    loadData();
+                    add.close();
+                },
+                error: function(xhr, status, error) {
+                    console.error("失败:", error);
+                }
+            });
+    }
+    function generateRandomString(length) {
+        const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        let result = '';
+        for (let i = 0; i < length; i++) {
+            result += characters.charAt(Math.floor(Math.random() * characters.length));
+        }
+        return result;
+    }
+
+    function formatDate(timestamp) {
+        var date = new Date(timestamp * 1000); // 时间戳单位为秒，所以需要乘以1000转换为毫秒
+        var year = date.getFullYear();
+        var month = ("0" + (date.getMonth() + 1)).slice(-2); // 月份从0开始，所以需要加1，然后用slice确保两位数格式
+        var day = ("0" + date.getDate()).slice(-2); // getDate返回月份中的某一天，用slice确保两位数格式
+        var hours = ("0" + date.getHours()).slice(-2); // 获取小时，同样用slice确保两位数格式
+        var minutes = ("0" + date.getMinutes()).slice(-2); // 获取分钟，同样用slice确保两位数格式
+
+        return year + "/" + month + "/" + day + " " + hours + ":" + minutes;
+    }
+
+</script>
+<style>
+    textarea{
+        height: 10em;
+    }
+     /* 样式可以根据需求进行修改 */
+     body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            min-height: 100vh;
+            display: flex;
+            width: 100%;
+        }
+        .menu {
+            background-color: #f0f0f0;
+            width: 200px;
+            padding: 20px;
+            font-size: larger;
+        }
+        .menu ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        .menu li {
+            margin-bottom: 10px;
+        }
+        .menu a {
+            text-decoration: none;
+            color: #333;
+            display: block;
+        }
+</style>
+</html>

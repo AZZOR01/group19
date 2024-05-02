@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>首页</title>
+    <meta name="viewport" content="width=device-width">
+    <link href="css/jquery.mobile-1.4.5.min.css" rel="stylesheet" type="text/css">
+    <script src="js/jquery-1.11.1.min.js" type="text/javascript"></script>
+    <script src="js/jquery.mobile-1.4.5.min.js" type="text/javascript"></script>
+    <script src="js/tjrac.base.js" type="text/javascript"></script>
+</head>
+<body>
+    <div class="container" id="index_index">
+        <div class="menu" >
+            <ul>
+                <li onclick="window.location.href = 'user_schedule.html'"><a href="#">Back</a></li>
+            </ul>
+        </div>
+        <div class="content" style="width: 100%;">
+            <div id="userDetails" style="display: flex;position: relative;margin-left: 20px;margin-top: 10px;margin-bottom: 50px;">
+                <img id="avatar" src="" alt="头像" style="border-radius: 50%; width: 200px;height: 200px;margin-right: 50px;background-color: #333;">
+                <div style="display: flex;">
+                    <div style="margin-right: 20px;">
+                        <p>Name: <span id="name"></span></p>
+                        <p>Account: <span id="no"></span></p>
+                        <p>Sex: <span id="sex"></span></p>
+                        <p>Star: <span id="star"></span></p>
+                        <p>Role: <span id="roleId"></span></p>
+                    </div>
+                    <div>
+                        <p>Teaching duration: <span id="time"></span></p>
+                        <p>Score: <span id="score"></span></p>
+                        <p>Awards received: <span id="awards"></span></p>
+                        <p>Proficient in projects: <span id="good"></span></p>
+                        <p>Last login: <span id="lastTime"></span></p>
+                    </div>
+                </div>
+            </div>
+            <dialog id="mod">
+                <form id="updateForm" style="width: 300px;">
+                    <label for="newName">Name:</label>
+                    <input type="text" id="newName" name="name">
+                    <label for="newpassword">Password:</label>
+                    <input type="text" id="newpassword" name="newpassword">
+                    <label for="newSex">Sex:</label>
+                    <input type="text" id="newSex" name="sex">
+                    <label for="newgood">Proficient in projects:</label>
+                    <input type="text" id="newgood" name="newgood">
+                    <label for="newawards">Awards received:</label>
+                    <input type="text" id="newawards" name="newawards"><br>
+                    
+                    <button type="button" onclick="updateUser()">Submit</button>
+                    <button type="button" onclick="mod.close()">Close</button>
+                </form>
+            </dialog>
+            <div style="display: flex;flex-wrap: wrap;">
+                
+                <!-- 预约列表 -->
+                <div style="margin-left: 20px;width: 20%; box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);padding: 20px;margin-bottom: 50px;">
+                    <h3>His current appointment list</h3>
+                    <div id="reservationList" style="height: 500px; overflow-y: auto;">
+                        <!-- 预约列表项将在JavaScript中动态添加 -->
+                    </div>
+                </div>
+
+                <div style="margin-left: 20px;width: 400px; box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);padding: 20px;margin-bottom: 50px;">
+                        <h3>Training start time</h3>
+                        <label for="startDate">Start date:</label>
+                        <input type="date" id="startDate" name="date">
+                        <label for="startTime">Start time:</label>
+                        <input type="time" id="startTime" name="time">
+                        <h3>Training end time</h3>
+                        <label for="endDate">End date:</label>
+                        <input type="date" id="endDate" name="date">
+                        <label for="endTime">End time:</label>
+                        <input type="time" id="endTime" name="time">
+                        <label for="field">Venue:</label>
+                        <input id="field" name="field">
+                        <button type="button" onclick="add()">Submit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <dialog id="notice" style="width: 50%;text-align: center; ">
+        <div id="noticeItem" style="text-align: center;margin-bottom: 20px;height: 200px;">
+        </div>
+        <button onclick="notice.close()" style="width: 100%;">OK</button> 
+    </dialog>
+</body>
+<script>
+    function loadData(){
+        var coachId = localStorage.getItem("coachId");
+
+        $.ajax({
+            type: "GET",
+            url: root_url + "/user/find?id=" + coachId,
+            contentType: "application/json",
+            success: function (data) {
+                if (data.code === 200) {
+                    console.log(data);
+                    var jsondata = JSON.stringify(data.data.user);
+                    localStorage.setItem("coachUser", jsondata);
+                    show(data.data.user);
+                    showReservations(data.data.reservationList);
+                } else {
+                    alert("error");
+                }
+            },
+        });
+    }
+    function show(User){
+
+        // 将其他用户属性展示在页面上
+        $("#name").html(User.name);
+        $("#no").html(User.no);
+        $("#sex").html(User.sex);
+        $("#avatar").attr("src", User.avatar); // 设置头像图片路径
+        $("#star").html(User.star);
+        var role = User.roleId==0?"Administrators":(User.roleId==1?"coach":"student");
+        $("#roleId").html(role);
+        $("#num").html(User.num);
+        $("#time").html(User.time);
+        $("#score").html(User.score);
+        $("#awards").html(User.awards);
+        $("#good").html(User.good);
+        $("#lastTime").html(User.lastTime);
+    }
+
+    // 获取用户对象并展示在页面上
+    $(document).ready(function(){
+        var storedUser = localStorage.getItem("User");
+        if(storedUser && JSON.parse(localStorage.getItem("User")).roleId==2) {
+            loadData();
+        } else {
+            // 给出提示或者执行其他逻辑
+            window.location.href = "login.html";
+        }
+    });
+
+    function add(){
+        var $noticeItem = $("#noticeItem");
+        $noticeItem.empty(); // 清空列表
+        var coachUser = JSON.parse(localStorage.getItem("coachUser"));
+        var User = JSON.parse(localStorage.getItem("User"));
+        var field = $("#field").val();
+        var startDate = $("#startDate").val();
+        var startTime = $("#startTime").val();
+        var endDate = $("#endDate").val();
+        var endTime = $("#endTime").val();
+
+        // 将日期和时间合并为完整的日期时间字符串
+        var startDateTimeString = startDate + "T" + startTime + ":00"; // 添加秒数
+        var endDateTimeString = endDate + "T" + endTime + ":00"; // 添加秒数
+
+        // 将日期时间字符串转换为时间戳（秒级）
+        var start = Math.floor(new Date(startDateTimeString).getTime() / 1000);
+        var end = Math.floor(new Date(endDateTimeString).getTime() / 1000);
+        var now =Math.floor(Date.now() / 1000);
+
+        if(!start||!end||start==946656000){
+            alert("Please fill in completely 请完整填写");
+            return;
+        }else if(now>start || now>end || end<start){
+            alert("Please fill in the time reasonably 请合理填写时间");
+            return;
+        }
+
+        const postData = {
+            startTime: start,
+            endTime: end,
+            coachId: coachUser.id,
+            coachName: coachUser.name,
+            userId: User.id,
+            userName: User.name,
+            field: field,
+        };
+
+
+        $.ajax({
+                type: "POST",
+                url: root_url + "/reservation/add",
+                contentType: "application/json",
+                data: JSON.stringify(postData),
+                success: function (data) {
+                    console.log(data)
+                    if (data.code === 200) {
+                        var $title = $("<div>").css({
+                                    "font-size": "xx-large",
+                                    "margin-top": "15px" ,
+                                    "color":"green"
+                                }).text("Appointment successful");
+                        $noticeItem.append($title,$item);
+                        notice.showModal();
+
+                        loadData();
+                    } else {
+                        var $title = $("<div>").css({
+                                    "font-size": "xx-large",
+                                    "margin-top": "15px" ,
+                                    "color":"rgb(118, 0, 0)"
+                                }).text("Appointment failed");
+                        var $item = $("<div>").css({
+                                    "font-size": "large",
+                                    "margin-top": "15px" 
+                                }).text(data.data);
+                        $noticeItem.append($title,$item);
+                        notice.showModal();
+                    }
+                },
+                error: function (xhr, status, error) {
+                    alert(error);
+                    alert(xhr.responseText);
+                }
+            });
+
+    }
+
+
+    // 显示预约列表
+    function showReservations(reservationList) {
+        var $reservationList = $("#reservationList");
+        $reservationList.empty(); // 清空列表
+
+        reservationList.forEach(function (reservation) {
+            var states = reservation.state == 0 ? "Unconfirmed" : (reservation.state == 1 ? "Confirmed" : (reservation.state == 2 ? "Completed" : "Canceled"));
+            var $itemTime = $("<div>").css({
+                "font-size": "large",
+                "margin-top": "15px" 
+            }).text("Time：" + formatDate(reservation.startTime) + " to " + formatDate(reservation.endTime));
+            var $item = $("<div>").css("white-space", "nowrap").text(reservation.userName + ", Status:"+ states);
+            
+            // 添加按钮
+            if (reservation.state == 1 || reservation.state == 0) {
+                $reservationList.append($itemTime,$item); // 添加预约信息到列表中
+            }
+        });
+    }
+    
+    function formatDate(secondsTimestamp) {
+        var date = new Date(secondsTimestamp * 1000); // 将秒级时间戳转换为毫秒级
+        var year = date.getFullYear();
+        var month = ("0" + (date.getMonth() + 1)).slice(-2);
+        var day = ("0" + date.getDate()).slice(-2);
+        var hours = ("0" + date.getHours()).slice(-2);
+        var minutes = ("0" + date.getMinutes()).slice(-2);
+
+        return year + "/" + month + "/" + day + " " + hours + ":" + minutes;
+    }
+
+
+</script>
+<style>
+     /* 样式可以根据需求进行修改 */
+     body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            min-height: 100vh;
+            display: flex;
+        }
+        .menu {
+            background-color: #f0f0f0;
+            width: 200px;
+            padding: 20px;
+            font-size: xx-large;
+        }
+        .menu ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        .menu li {
+            margin-bottom: 10px;
+        }
+        .menu a {
+            text-decoration: none;
+            color: #333;
+            display: block;
+        }
+</style>
+</html>

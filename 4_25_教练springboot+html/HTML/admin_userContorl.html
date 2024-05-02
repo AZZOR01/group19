@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>首页</title>
+    <meta name="viewport" content="width=device-width">
+    <link href="css/jquery.mobile-1.4.5.min.css" rel="stylesheet" type="text/css">
+    <script src="js/jquery-1.11.1.min.js" type="text/javascript"></script>
+    <script src="js/jquery.mobile-1.4.5.min.js" type="text/javascript"></script>
+    <script src="js/tjrac.base.js" type="text/javascript"></script>
+</head>
+<body>
+    <div class="container" id="index_index">
+        <div class="menu">
+            <ul>
+                <li onclick="window.location.href = 'admin_home.html'"><a href="#">Home</a></li>
+                <li onclick="window.location.href = 'admin_index.html'"><a href="#">User Home</a></li>
+                <li onclick="window.location.href = 'admin_userContorl.html'"><a href="#">UserContorl</a></li>
+                <li onclick="window.location.href = 'admin_reservationContorl.html'"><a href="#">ReservationContorl</a></li>
+                <li onclick="window.location.href = 'admin_notification.html'"><a href="#">Notification Center</a></li>
+                <li onclick="window.location.href = 'admin_order.html'"><a href="#">Orders</a></li>
+                <li onclick="window.location.href = 'login.html'"><a href="#">QUIT</a></li>
+            </ul>
+        </div>
+        <div class="content" style="width: 100%;">
+            <div style="display: flex;width: 50%;margin-left: 20px;margin-top: 10px;">
+                <input id="s_name" name="no" required placeholder="Name">
+                <Button type="button" onclick="loadData()" style="width: 100px;margin-left: 10px;">Search</Button>
+                <Button type="button" onclick="reset()" style="width: 100px;margin-left: 10px;">Reset</Button>
+                <Button type="button" onclick="add.showModal()" style="width: 200px;margin-left: 10px;">Add User</Button>
+            </div>
+            <div style="width: 95%; margin: 20px 20px;">
+                <table id="userTable">
+                    <thead>
+                        <tr>
+                            <th>Avatar</th>
+                            <th>Name</th>
+                            <th>No</th>
+                            <th>Sex</th>
+                            <th>Star</th>
+                            <th>LastTime</th>
+                            <th>Remaining times<br>(Student)</th>
+                            <th>Expiration<br>(Student)</th>
+                            <th>Teaching duration<br>(Coach)</th>
+                            <th>Role</th>
+                            <th>Operation</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- 这里将使用jQuery动态添加用户数据 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <dialog id="mod">
+        <form id="updateForm" style="width: 300px;">
+            <input type="number" id="m_id" style="display: none;">
+            <label for="m_password">Password:</label>
+            <input type="password" id="m_password" name="passwords">
+            <label for="m_star">Star:</label>
+            <input type="number" id="m_star" name="m_star">
+            <label for="m_num">Remaining times (Student):</label>
+            <input type="number" id="m_num" name="m_num">
+            <label for="m_roleId">Role:</label>
+            <select id="m_roleId" name="Role">
+                <option value="0">administrator</option>
+                <option value="1">Coach</option>
+                <option value="2">Student</option>
+            </select>
+            <div style="display: flex;">
+                <button type="button" onclick="mod.close()">Close</button>
+                <button type="button" onclick="updateUser()" style="background-color: #0c5e36;color: #f0f0f0;margin-left: 5px;">Submit</button>
+            </div>
+        </form>
+    </dialog>
+    <dialog id="add">
+        <form id="addForm" style="width: 300px;">
+            <label for="n_no">No:</label>
+            <input type="text" id="n_no" name="n_no">
+            <label for="n_name">Name:</label>
+            <input type="text" id="n_name" name="n_name">
+            <label for="n_password">Password:</label>
+            <input type="password" id="n_password" name="n_password">
+            <label for="n_sex">Sex:</label>
+            <input type="text" id="n_sex" name="n_sex">
+            <label for="n_roleId">Role:</label>
+            <select id="n_roleId" name="Role">
+                <option value="0">administrator</option>
+                <option value="1">Coach</option>
+                <option value="2">Student</option>
+            </select>
+            <div style="display: flex;">
+                <button type="button" onclick="add.close()">Close</button>
+                <button type="button" onclick="addUser()" style="background-color: #0c5e36;color: #f0f0f0;margin-left: 5px;">Add</button>
+            </div>
+        </form>
+    </dialog>
+    <dialog id="del" style="width: 25%;text-align: center; ">
+        <input type="number" id="d_id" style="display: none;">
+        <div style="height: 150px;font-size: larger; display: flex; justify-content: center;align-items: center;">
+            Are you sure you want to delete this user?
+        </div>
+        <div style="display: flex;">
+            <button onclick="del.close()" style="width: 100%;">No!</button> 
+            <button onclick="deleteUser()" style="width: 100%;background-color: brown; color: #ddd;margin-left: 5px;">Sure</button> 
+        </div>
+    </dialog>
+</body>
+<script>
+    function loadData(){
+        var User = JSON.parse(localStorage.getItem("User"));
+        var name = $("#s_name").val();
+        const postData = {
+            name:name,
+        }
+
+        $.ajax({
+            type: "post",
+            url: root_url + "/user/listPageN",
+            contentType: "application/json",
+            data: JSON.stringify(postData),
+            success: function (data) {
+                if (data.code === 200) {
+                    // 清空表格数据
+                    $("#userTable tbody").empty();
+                    
+                    // 填充用户数据
+                    var users = data.data;
+                    users.forEach(function(user) {
+                        var role = user.roleId == 0 ? "administrator" : (user.roleId == 1 ? "Coach" : "User");
+                        var expiration = user.roleId == 2 ? formatDate(user.expiration) : "--";
+                        var num = user.roleId == 2 ? user.num : "--";
+                        var time = (user.roleId == 1 ? user.time + ' hour': "--");
+                        var avatar = user.avatar ? "<td><img src='" + user.avatar + "' alt='Avatar' class='avatarTable'></td>" : "<td><img src='" + userImg + "' alt='Avatar' class='avatarTable'></td>"
+                        var btnCoach = user.roleId == 10 ? "<button onclick='coachRole(" + user.id + ")'>Becoming a coach</button><br>" : ""
+                        var row = "<tr>" +
+                                avatar +
+                                "<td>" + user.name + "</td>" +
+                                "<td>" + user.no + "</td>" +
+                                "<td>" + user.sex + "</td>" +
+                                "<td>" + user.star + "</td>" +
+                                "<td>" + user.lastTime + "</td>" +
+                                "<td>" + num + "</td>" +
+                                "<td>" + expiration + "</td>" +
+                                "<td>" + time + "</td>" +
+                                "<td>" + role + "</td>" +
+                                "<td>" +
+                                    btnCoach +
+                                "<button onclick='editUser(" + JSON.stringify(user) + ")' style='margin-right: 10px;'>Edit</button>" +
+                                "<button onclick='delShow(" + user.id + ")'>Delete</button>" +
+                                "</td>" +
+                                // 添加其他列的数据
+                                "</tr>";
+                        $("#userTable tbody").append(row);
+                    });
+                } else {
+                    alert("error");
+                }
+            },
+        });
+    }
+
+    function reset(){
+        $("#s_name").val("");
+        loadData();
+    }
+
+    function editUser(user){
+        $("#m_id").val(user.id);
+        $("#m_password").val(user.password);
+        $("#m_star").val(user.star);
+        $("#m_num").val(user.num);
+        $("#m_roleId").val(user.roleId).trigger("change");
+        mod.showModal();
+    }
+
+    function delShow(id){
+        $("#d_id").val(id);
+        del.showModal();
+    }
+
+    function deleteUser(){
+        var id = $("#d_id").val();
+        $.ajax({
+            type: "GET",
+            url: root_url + "/user/delete?id=" + id,
+            contentType: "application/json",
+            success: function (data) {
+                if (data.code === 200) {
+                    loadData();
+                    del.close();
+                } else {
+                    alert("error");
+                }
+            },
+        });
+    }
+
+    function updateUser(){
+       var userID = $("#m_id").val();
+            var formData = {
+                id: userID,
+                password: $("#m_password").val(),
+                star: $("#m_star").val(),
+                num: $("#m_num").val(),
+                roleId: $("#m_roleId").val(),
+            };
+
+            $.ajax({
+                type: "POST",
+                url: root_url + "/user/update",
+                data: JSON.stringify(formData),
+                contentType: "application/json",
+                success: function(response) {
+                    loadData();
+                    mod.close();
+                },
+                error: function(xhr, status, error) {
+                    console.error("error:", error);
+                }
+            });
+    }
+
+    function coachRole(id){
+        var formData = {
+                id: id,
+                roleId: 1,
+            };
+
+            $.ajax({
+                type: "POST",
+                url: root_url + "/user/update",
+                data: JSON.stringify(formData),
+                contentType: "application/json",
+                success: function(response) {
+                    loadData();
+                },
+                error: function(xhr, status, error) {
+                    console.error("error:", error);
+                }
+            });
+    }
+
+    function addUser(){
+            const userNo = $("#n_no").val();
+            const userName = $("#n_name").val();
+            const userPass = $("#n_password").val();
+            const sex = $("#n_sex").val();
+            const n_roleId = $("#n_roleId").val();
+
+            if(!userNo||!userName||!userPass||!n_roleId){
+                alert("Please fill in completely 请完整填写");
+                return;
+            }
+
+            const postData = {
+                no: userNo,
+                name: userName,
+                password: userPass,
+                sex: sex,
+                roleId: n_roleId
+            };
+
+            $.ajax({
+                type: "POST",
+                url: root_url + "/user/save",
+                contentType: "application/json",
+                data: JSON.stringify(postData),
+                success: function (data) {
+                    if (data.code === 200) {
+                        loadData();
+                        add.close();
+                        $("#n_sex").val("");
+                        $("#n_name").val("");
+                        $("#n_password").val("");
+                        $("#n_no").val("");
+                    } else {
+                        alert(data.data)
+                    }
+                },
+                error: function (xhr, status, error) {
+                    alert(error);
+                    alert(xhr.responseText);
+                }
+            });
+    }
+
+    // 获取用户对象并展示在页面上
+    $(document).ready(function(){
+        var storedUser = localStorage.getItem("User");
+        if(storedUser && JSON.parse(localStorage.getItem("User")).roleId==0) {
+            loadData();
+        } else {
+            // 给出提示或者执行其他逻辑
+            window.location.href = "login.html";
+        }
+    });
+
+    function formatDate(timestamp) {
+        if(timestamp==0) return("No time")
+        var date = new Date(timestamp * 1000); // 时间戳单位为秒，所以需要乘以1000转换为毫秒
+        var year = date.getFullYear();
+        var month = ("0" + (date.getMonth() + 1)).slice(-2); // 月份从0开始，所以需要加1，然后用slice确保两位数格式
+        var day = ("0" + date.getDate()).slice(-2); // getDate返回月份中的某一天，用slice确保两位数格式
+        var hours = ("0" + date.getHours()).slice(-2); // 获取小时，同样用slice确保两位数格式
+        var minutes = ("0" + date.getMinutes()).slice(-2); // 获取分钟，同样用slice确保两位数格式
+
+        return year + "/" + month + "/" + day + " " + hours + ":" + minutes;
+    }
+
+</script>
+<style>
+     /* 样式可以根据需求进行修改 */
+     body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            min-height: 100vh;
+            display: flex;
+            width: 100%;
+        }
+        .menu {
+            background-color: #f0f0f0;
+            width: 200px;
+            padding: 20px;
+            font-size: larger;
+        }
+        .menu ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        .menu li {
+            margin-bottom: 10px;
+        }
+        .menu a {
+            text-decoration: none;
+            color: #333;
+            display: block;
+        }
+        .coach-box{
+            width: 200px;
+            min-height: 300px;
+            padding: 20px;
+            text-align: center;
+            margin: 10px;
+            box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+        }
+        .coach-box .name{
+            font-size: x-large;
+        }
+        .avatar{
+            width: 200px;
+            height: 200px;
+        }
+        .avatarTable{
+            width: 100px;
+            height: 100px;
+        }
+        #userTable {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        #userTable th, #userTable td {
+            padding: 8px;
+            text-align: center;
+            border-bottom: 1px solid #ddd; /* 添加底部边框 */
+        }
+
+        #userTable th {
+            background-color: #f2f2f2;
+        }
+</style>
+</html>

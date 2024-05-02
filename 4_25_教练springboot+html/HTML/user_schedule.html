@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>首页</title>
+    <meta name="viewport" content="width=device-width">
+    <link href="css/jquery.mobile-1.4.5.min.css" rel="stylesheet" type="text/css">
+    <script src="js/jquery-1.11.1.min.js" type="text/javascript"></script>
+    <script src="js/jquery.mobile-1.4.5.min.js" type="text/javascript"></script>
+    <script src="js/tjrac.base.js" type="text/javascript"></script>
+</head>
+<body>
+    <div class="container" id="index_index">
+        <div class="menu">
+            <ul>
+                <li onclick="window.location.href = 'user_home.html'"><a href="#">Home</a></li>
+                <li onclick="window.location.href = 'user_index.html'"><a href="#">UserHome</a></li>
+                <li onclick="window.location.href = 'user_schedule.html'"><a href="#">Schedule Training</a></li>
+                <li onclick="window.location.href = 'user_buy.html'"><a href="#">Subscription Plan</a></li>
+                <li onclick="window.location.href = 'login.html'"><a href="#">QUIT</a></li>
+            </ul>
+        </div>
+        <div class="content" style="width: 100%;">
+            <div id="coachList" style="display: flex; flex-wrap: wrap;margin-top: 20px;margin-left: 30px;">
+
+            </div>
+        </div>
+    </div>
+    
+</body>
+<script>
+    function loadData(){
+        var User = JSON.parse(localStorage.getItem("User"));
+        console.log(User)
+
+        $.ajax({
+            type: "GET",
+            url: root_url + "/user/find?id=" + User.id,
+            contentType: "application/json",
+            success: function (data) {
+                if (data.code === 200) {
+                    console.log(data);
+                    var jsondata = JSON.stringify(data.data.user);
+                    localStorage.setItem("User", jsondata);
+                    
+                    showCoach(data.data.coach);
+                    // location.reload();
+                } else {
+                    alert("error");
+                }
+            },
+        });
+    }
+
+    // 获取用户对象并展示在页面上
+    $(document).ready(function(){
+        var storedUser = localStorage.getItem("User");
+        if(storedUser && JSON.parse(localStorage.getItem("User")).roleId==2) {
+            loadData();
+        } else {
+            // 给出提示或者执行其他逻辑
+            window.location.href = "login.html";
+        }
+    });
+
+    // 显示教练
+    function showCoach(coachs) {
+        var $coachList = $("#coachList");
+        $coachList.empty(); // 清空列表
+
+        coachs.forEach(function (coach) {
+            // 创建教练盒子
+            var $coachBox = $("<div>").addClass("coach-box");
+
+            // 头像
+            var $avatar = $("<img>").attr("src", coach.avatar).addClass("avatar");
+            $coachBox.append($avatar);
+
+            // 姓名
+            var $name = $("<div>").text(coach.name).addClass("name");
+            $coachBox.append($name);
+
+            // 星级
+            var $star = $("<div>").text("Star: " + coach.star).addClass("star");
+            $coachBox.append($star);
+
+            // 评分
+            var $score = $("<div>").text("Score: " + coach.score).addClass("score");
+            $coachBox.append($score);
+
+            // 评分
+            var $score = $("<div>").text("Teaching time: " + coach.time)
+            $coachBox.append($score);
+
+            var $confirmButton = $("<button>").text("Appointment").click(function() {
+                    handleReservationAction(coach.id);
+                }).css({"width":"100%","margin-top":"10px"});
+            $coachBox.append($confirmButton);
+
+            // 添加到教练列表
+            $coachList.append($coachBox);
+        });
+    }
+
+    // 处理预约操作
+    function handleReservationAction(userId) {
+        console.log("userId:", userId);
+        localStorage.setItem("coachId", userId);
+        window.location.href = "user_addSubscribe.html"
+    }
+
+    function formatDate(timestamp) {
+        var date = new Date(timestamp * 1000); // 时间戳单位为秒，所以需要乘以1000转换为毫秒
+        var year = date.getFullYear();
+        var month = ("0" + (date.getMonth() + 1)).slice(-2); // 月份从0开始，所以需要加1，然后用slice确保两位数格式
+        var day = ("0" + date.getDate()).slice(-2); // getDate返回月份中的某一天，用slice确保两位数格式
+        var hours = ("0" + date.getHours()).slice(-2); // 获取小时，同样用slice确保两位数格式
+        var minutes = ("0" + date.getMinutes()).slice(-2); // 获取分钟，同样用slice确保两位数格式
+
+        return year + "/" + month + "/" + day + " " + hours + ":" + minutes;
+    }
+
+</script>
+<style>
+     /* 样式可以根据需求进行修改 */
+     body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            min-height: 100vh;
+            display: flex;
+            width: 100%;
+        }
+        .menu {
+            background-color: #f0f0f0;
+            width: 200px;
+            padding: 20px;
+            font-size: larger;
+        }
+        .menu ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        .menu li {
+            margin-bottom: 10px;
+        }
+        .menu a {
+            text-decoration: none;
+            color: #333;
+            display: block;
+        }
+        .coach-box{
+            width: 200px;
+            min-height: 330px;
+            padding: 20px;
+            text-align: center;
+            margin: 10px;
+            box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+        }
+        .coach-box .name{
+            font-size: x-large;
+        }
+        .avatar{
+            width: 200px;
+            height: 200px;
+        }
+</style>
+</html>
